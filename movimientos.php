@@ -111,7 +111,7 @@ $productos = $pdo->query("SELECT * FROM producto WHERE estado = 1 ORDER BY nombr
 <div class="modal fade" id="modalMovimiento" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form method="POST" action="movimientos.php">
+      <form method="POST" action="movimientos.php" class="needs-validation" novalidate>
         <div class="modal-header">
           <h5 class="modal-title">Registrar Movimiento de Stock</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

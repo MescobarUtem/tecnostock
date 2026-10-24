@@ -66,9 +66,6 @@ $categorias = $pdo->query("SELECT * FROM categoria WHERE estado = 1 ORDER BY nom
         <a href="productos.php" class="btn btn-outline-danger ms-2">Limpiar</a>
     <?php endif; ?>
 </form>
-
-<?= $mensaje ?>
-
 <div class="card shadow-sm">
     <div class="card-body">
         <table class="table table-hover align-middle mb-0">
@@ -124,14 +121,13 @@ $categorias = $pdo->query("SELECT * FROM categoria WHERE estado = 1 ORDER BY nom
     </div>
 </div>
 
-<!-- Modal Crear Producto (se mantiene igual) -->
+<!-- Modal Crear Producto -->
 <div class="modal fade" id="modalProducto" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <form method="POST" action="productos.php">
+      <form method="POST" action="productos.php" class="needs-validation" novalidate>
         <div class="modal-header"><h5 class="modal-title">Registrar Producto</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body row g-3">
-          <!-- Campos simplificados por espacio, mantén los que tenías en tu archivo original o usa estos -->
           <div class="col-md-6"><label>Código *</label><input type="text" name="codigo" class="form-control" required></div>
           <div class="col-md-6"><label>Nombre *</label><input type="text" name="nombre" class="form-control" required></div>
           <div class="col-md-6"><label>Categoría *</label><select name="id_categoria" class="form-select" required><option value="">Seleccione...</option><?php foreach ($categorias as $c): ?><option value="<?= $c['id_categoria'] ?>"><?= htmlspecialchars($c['nombre']) ?></option><?php endforeach; ?></select></div>
@@ -146,12 +142,11 @@ $categorias = $pdo->query("SELECT * FROM categoria WHERE estado = 1 ORDER BY nom
     </div>
   </div>
 </div>
-
 <!-- Modal Editar Producto -->
 <div class="modal fade" id="modalEditarProducto" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <form method="POST" action="producto_editar.php">
+      <form method="POST" action="producto_editar.php" class="needs-validation" novalidate>
         <div class="modal-header"><h5 class="modal-title">Editar Producto</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body row g-3">
           <input type="hidden" name="id_producto" id="edit_id_producto">
