@@ -4,28 +4,32 @@ include_once 'includes/header.php';
 
 $mensaje = '';
 
-// Registrar nuevo producto
+// Registrar nuevo producto (Solo Administradores)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_producto'])) {
-    $codigo = trim($_POST['codigo']);
-    $nombre = trim($_POST['nombre']);
-    $descripcion = trim($_POST['descripcion']);
-    $precio = $_POST['precio'];
-    $stock_actual = $_POST['stock_actual'];
-    $stock_minimo = $_POST['stock_minimo'];
-    $id_categoria = $_POST['id_categoria'];
-    $estado = isset($_POST['estado']) ? 1 : 0;
-
-    if (!empty($codigo) && !empty($nombre) && !empty($id_categoria)) {
-        $stmt = $pdo->prepare("INSERT INTO producto (codigo, nombre, descripcion, precio, stock_actual, stock_minimo, estado, id_categoria) 
-                                VALUES (:codigo, :nombre, :descripcion, :precio, :stock_actual, :stock_minimo, :estado, :id_categoria)");
-        $stmt->execute([
-            'codigo' => $codigo, 'nombre' => $nombre, 'descripcion' => $descripcion,
-            'precio' => $precio, 'stock_actual' => $stock_actual, 'stock_minimo' => $stock_minimo,
-            'estado' => $estado, 'id_categoria' => $id_categoria
-        ]);
-        $mensaje = '<div class="alert alert-success">Producto registrado correctamente.</div>';
+    if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'admin') {
+        $mensaje = '<div class="alert alert-danger">Acceso denegado. No tienes permisos para crear productos.</div>';
     } else {
-        $mensaje = '<div class="alert alert-danger">Por favor completa los campos obligatorios.</div>';
+        $codigo = trim($_POST['codigo']);
+        $nombre = trim($_POST['nombre']);
+        $descripcion = trim($_POST['descripcion']);
+        $precio = $_POST['precio'];
+        $stock_actual = $_POST['stock_actual'];
+        $stock_minimo = $_POST['stock_minimo'];
+        $id_categoria = $_POST['id_categoria'];
+        $estado = isset($_POST['estado']) ? 1 : 0;
+
+        if (!empty($codigo) && !empty($nombre) && !empty($id_categoria)) {
+            $stmt = $pdo->prepare("INSERT INTO producto (codigo, nombre, descripcion, precio, stock_actual, stock_minimo, estado, id_categoria) 
+                                    VALUES (:codigo, :nombre, :descripcion, :precio, :stock_actual, :stock_minimo, :estado, :id_categoria)");
+            $stmt->execute([
+                'codigo' => $codigo, 'nombre' => $nombre, 'descripcion' => $descripcion,
+                'precio' => $precio, 'stock_actual' => $stock_actual, 'stock_minimo' => $stock_minimo,
+                'estado' => $estado, 'id_categoria' => $id_categoria
+            ]);
+            $mensaje = '<div class="alert alert-success">Producto registrado correctamente.</div>';
+        } else {
+            $mensaje = '<div class="alert alert-danger">Por favor completa los campos obligatorios.</div>';
+        }
     }
 }
 
@@ -53,11 +57,12 @@ $categorias = $pdo->query("SELECT * FROM categoria WHERE estado = 1 ORDER BY nom
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Gestión de Productos</h2>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalProducto">
-        <i class="bi bi-plus-lg"></i> Nuevo Producto
-    </button>
+    <?php if (isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin'): ?>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalProducto">
+            <i class="bi bi-plus-lg"></i> Nuevo Producto
+        </button>
+    <?php endif; ?>
 </div>
-
 <!-- Barra de búsqueda -->
 <form method="GET" action="productos.php" class="mb-4 d-flex">
     <input type="text" name="buscar" class="form-control me-2" placeholder="Buscar por código o nombre..." value="<?= htmlspecialchars($buscar) ?>">
@@ -99,20 +104,24 @@ $categorias = $pdo->query("SELECT * FROM categoria WHERE estado = 1 ORDER BY nom
                             </td>
                             <td><?= $p['estado'] == 1 ? '<span class="badge bg-success">Activo</span>' : '<span class="badge bg-secondary">Inactivo</span>' ?></td>
                             <td class="text-end">
-                                <!-- Botón Editar -->
-                                <button type="button" class="btn btn-sm btn-outline-warning me-1 btn-editar"
-                                    data-id="<?= $p['id_producto'] ?>" data-codigo="<?= htmlspecialchars($p['codigo']) ?>"
-                                    data-nombre="<?= htmlspecialchars($p['nombre']) ?>" data-categoria="<?= $p['id_categoria'] ?>"
-                                    data-precio="<?= $p['precio'] ?>" data-minimo="<?= $p['stock_minimo'] ?>"
-                                    data-desc="<?= htmlspecialchars($p['descripcion']) ?>" data-estado="<?= $p['estado'] ?>"
-                                    data-bs-toggle="modal" data-bs-target="#modalEditarProducto">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <!-- Botón Eliminar -->
-                                <a href="producto_eliminar.php?id=<?= $p['id_producto'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar producto?');">
-                                    <i class="bi bi-trash"></i>
-                                </a>
-                            </td>
+    <?php if (isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin'): ?>
+        <!-- Botón Editar -->
+        <button type="button" class="btn btn-sm btn-outline-warning me-1 btn-editar"
+            data-id="<?= $p['id_producto'] ?>" data-codigo="<?= htmlspecialchars($p['codigo']) ?>"
+            data-nombre="<?= htmlspecialchars($p['nombre']) ?>" data-categoria="<?= $p['id_categoria'] ?>"
+            data-precio="<?= $p['precio'] ?>" data-minimo="<?= $p['stock_minimo'] ?>"
+            data-desc="<?= htmlspecialchars($p['descripcion']) ?>" data-estado="<?= $p['estado'] ?>"
+            data-bs-toggle="modal" data-bs-target="#modalEditarProducto">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <!-- Botón Eliminar -->
+        <a href="producto_eliminar.php?id=<?= $p['id_producto'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar producto?');">
+            <i class="bi bi-trash"></i>
+        </a>
+    <?php else: ?>
+        <span class="badge bg-light text-muted">Solo lectura</span>
+    <?php endif; ?>
+</td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -146,7 +155,7 @@ $categorias = $pdo->query("SELECT * FROM categoria WHERE estado = 1 ORDER BY nom
 <div class="modal fade" id="modalEditarProducto" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <form method="POST" action="producto_editar.php" class="needs-validation" novalidate>
+      <form method="POST" action="producto_editar.php" class="needs-validation" novalidate> 
         <div class="modal-header"><h5 class="modal-title">Editar Producto</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body row g-3">
           <input type="hidden" name="id_producto" id="edit_id_producto">

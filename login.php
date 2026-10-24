@@ -13,20 +13,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute(['correo' => $correo]);
         $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Validación simple de contraseña
-        if ($usuario && $usuario['clave'] === $clave) {
-            $_SESSION['id_usuario'] = $usuario['id_usuario'];
-            $_SESSION['nombre_usuario'] = $usuario['nombre'];
-            
-            header("Location: index.php");
-            exit;
-        } else {
-            $error = "Correo o contraseña incorrectos, o usuario inactivo.";
-        }
-    } else {
-        $error = "Por favor, completa todos los campos.";
-    }
+    // Validación simple de contraseña
+if ($usuario && $usuario['clave'] === $clave) {
+    $_SESSION['id_usuario'] = $usuario['id_usuario'];
+    $_SESSION['nombre_usuario'] = $usuario['nombre'];
+    $_SESSION['rol'] = $usuario['rol']; // Guardamos el rol ('admin' o 'empleado')
+    
+    header("Location: index.php");
+    exit;
+} else {
+    $error = "Correo o contraseña incorrectos, o usuario inactivo.";
 }
+}}
 ?>
 <!DOCTYPE html>
 <html lang="es">
