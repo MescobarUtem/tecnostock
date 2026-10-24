@@ -1,6 +1,13 @@
 <?php
-require_once 'Conexion.php';
+session_start();
 
+// Si no ha iniciado sesión o no es administrador, denegar acceso
+if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== 'admin') {
+    header('Location: productos.php?error=acceso_denegado');
+    exit;
+}
+
+require_once 'Conexion.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id_producto = $_POST['id_producto'];
     $codigo = trim($_POST['codigo']);
