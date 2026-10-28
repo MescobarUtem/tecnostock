@@ -19,14 +19,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_producto'])) {
         $estado = isset($_POST['estado']) ? 1 : 0;
 
         if (!empty($codigo) && !empty($nombre) && !empty($id_categoria)) {
-            $stmt = $pdo->prepare("INSERT INTO producto (codigo, nombre, descripcion, precio, stock_actual, stock_minimo, estado, id_categoria) 
-                                    VALUES (:codigo, :nombre, :descripcion, :precio, :stock_actual, :stock_minimo, :estado, :id_categoria)");
-            $stmt->execute([
-                'codigo' => $codigo, 'nombre' => $nombre, 'descripcion' => $descripcion,
-                'precio' => $precio, 'stock_actual' => $stock_actual, 'stock_minimo' => $stock_minimo,
-                'estado' => $estado, 'id_categoria' => $id_categoria
-            ]);
-            $mensaje = '<div class="alert alert-success">Producto registrado correctamente.</div>';
+            try {
+                $stmt = $pdo->prepare("INSERT INTO producto (codigo, nombre, descripcion, precio, stock_actual, stock_minimo, estado, id_categoria) 
+                                        VALUES (:codigo, :nombre, :descripcion, :precio, :stock_actual, :stock_minimo, :estado, :id_categoria)");
+                $stmt->execute([
+                    'codigo' => $codigo, 'nombre' => $nombre, 'descripcion' => $descripcion,
+                    'precio' => $precio, 'stock_actual' => $stock_actual, 'stock_minimo' => $stock_minimo,
+                    'estado' => $estado, 'id_categoria' => $id_categoria
+                ]);
+                $mensaje = '<div class="alert alert-success">Producto registrado correctamente.</div>';
+            } catch (PDOException $e) {
+                // Atrapa el error 23000 de clave única duplicada
+                if ($e->getCode() == 23000) {
+                    $mensaje = '<div class="alert alert-danger">Error: El código de producto <strong>' . htmlspecialchars($codigo) . '</strong> ya está en uso.</div>';
+                } else {
+                    $mensaje = '<div class="alert alert-danger">Error de base de datos: ' . $e->getMessage() . '</div>';
+                }
+            }
         } else {
             $mensaje = '<div class="alert alert-danger">Por favor completa los campos obligatorios.</div>';
         }
@@ -63,11 +72,15 @@ $categorias = $pdo->query("SELECT * FROM categoria WHERE estado = 1 ORDER BY nom
         </button>
     <?php endif; ?>
 </div>
+
+<!-- Alertas del sistema (éxito o error) -->
+<?= $mensaje ?>
+
 <!-- Barra de búsqueda -->
 <form method="GET" action="productos.php" class="mb-4 d-flex">
-    <input type="text" name="buscar" class="form-control me-2" placeholder="Buscar por código o nombre..." value="<?= htmlspecialchars($buscar) ?>">
+    <input type="text" name="buscar" class="form-control me-2" placeholder="Buscar por código o nombre..." value="<?= htmlspecialchars($buscar ?? '') ?>">
     <button type="submit" class="btn btn-outline-secondary">Buscar</button>
-    <?php if ($buscar): ?>
+    <?php if (!empty($buscar)): ?>
         <a href="productos.php" class="btn btn-outline-danger ms-2">Limpiar</a>
     <?php endif; ?>
 </form>
@@ -94,7 +107,7 @@ $categorias = $pdo->query("SELECT * FROM categoria WHERE estado = 1 ORDER BY nom
                             <td><code><?= htmlspecialchars($p['codigo']) ?></code></td>
                             <td class="fw-bold"><?= htmlspecialchars($p['nombre']) ?></td>
                             <td><span class="badge bg-info text-dark"><?= htmlspecialchars($p['categoria']) ?></span></td>
-                            <td>$<?= number_format($p['precio'], 2) ?></td>
+                            <td>$<?= number_format($p['precio'], 0, ',', '.') ?></td>
                             <td>
                                 <?php if ($p['stock_actual'] <= $p['stock_minimo']): ?>
                                     <span class="badge bg-danger"><?= $p['stock_actual'] ?> (Mín: <?= $p['stock_minimo'] ?>)</span>

@@ -12,33 +12,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_movimiento'
     $id_usuario = $_SESSION['id_usuario'];
 
     if (!empty($id_producto) && $cantidad > 0) {
-        try {
-            $pdo->beginTransaction();
+        
+        // 1. Consultar el stock actual antes de procesar
+        $stmtCheck = $pdo->prepare("SELECT stock_actual, nombre FROM producto WHERE id_producto = :id");
+        $stmtCheck->execute(['id' => $id_producto]);
+        $prodSelect = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
-            // Insertar el movimiento
-            $stmt = $pdo->prepare("INSERT INTO movimiento (fecha_hora, tipo, cantidad, observacion, id_producto, id_usuario) 
-                                    VALUES (NOW(), :tipo, :cantidad, :observacion, :id_producto, :id_usuario)");
-            $stmt->execute([
-                'tipo' => $tipo,
-                'cantidad' => $cantidad,
-                'observacion' => $observacion,
-                'id_producto' => $id_producto,
-                'id_usuario' => $id_usuario
-            ]);
+        if (!$prodSelect) {
+            $mensaje = '<div class="alert alert-danger">El producto seleccionado no existe.</div>';
+        } elseif ($tipo === 'salida' && $cantidad > $prodSelect['stock_actual']) {
+            // Validación de la Regla de Negocio: Evitar stock negativo
+            $mensaje = '<div class="alert alert-danger">Error: Stock insuficiente. El stock actual de <strong>' 
+                        . htmlspecialchars($prodSelect['nombre']) . '</strong> es de <strong>' 
+                        . $prodSelect['stock_actual'] . '</strong> unidades.</div>';
+        } else {
+            // 2. Si la validación se cumple, procesamos la transacción de forma atómica
+            try {
+                $pdo->beginTransaction();
 
-            // Actualizar stock del producto
-            if ($tipo === 'entrada') {
-                $update = $pdo->prepare("UPDATE producto SET stock_actual = stock_actual + :cant WHERE id_producto = :id");
-            } else {
-                $update = $pdo->prepare("UPDATE producto SET stock_actual = stock_actual - :cant WHERE id_producto = :id");
+                // Insertar el movimiento en la auditoría
+                $stmt = $pdo->prepare("INSERT INTO movimiento (fecha_hora, tipo, cantidad, observacion, id_producto, id_usuario) 
+                                        VALUES (NOW(), :tipo, :cantidad, :observacion, :id_producto, :id_usuario)");
+                $stmt->execute([
+                    'tipo' => $tipo,
+                    'cantidad' => $cantidad,
+                    'observacion' => $observacion,
+                    'id_producto' => $id_producto,
+                    'id_usuario' => $id_usuario
+                ]);
+
+                // Actualizar stock del producto
+                if ($tipo === 'entrada') {
+                    $update = $pdo->prepare("UPDATE producto SET stock_actual = stock_actual + :cant WHERE id_producto = :id");
+                } else {
+                    $update = $pdo->prepare("UPDATE producto SET stock_actual = stock_actual - :cant WHERE id_producto = :id");
+                }
+                $update->execute(['cant' => $cantidad, 'id' => $id_producto]);
+
+                $pdo->commit();
+                $mensaje = '<div class="alert alert-success">Movimiento de inventario registrado con éxito.</div>';
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $mensaje = '<div class="alert alert-danger">Error al procesar el movimiento: ' . $e->getMessage() . '</div>';
             }
-            $update->execute(['cant' => $cantidad, 'id' => $id_producto]);
-
-            $pdo->commit();
-            $mensaje = '<div class="alert alert-success">Movimiento de inventario registrado con éxito.</div>';
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $mensaje = '<div class="alert alert-danger">Error al procesar el movimiento: ' . $e->getMessage() . '</div>';
         }
     } else {
         $mensaje = '<div class="alert alert-danger">Selecciona un producto y asegura una cantidad válida.</div>';

@@ -2,23 +2,30 @@
 require_once 'Conexion.php';
 include_once 'includes/header.php';
 
-// Procesar formulario de creación de categoría
+// Definir si el usuario actual es administrador
+$esAdmin = isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin';
+
+// Procesar formulario de creación de categoría (Solo Administrador)
 $mensaje = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_categoria'])) {
-    $nombre = trim($_POST['nombre']);
-    $descripcion = trim($_POST['descripcion']);
-    $estado = isset($_POST['estado']) ? 1 : 0;
-
-    if (!empty($nombre)) {
-        $stmt = $pdo->prepare("INSERT INTO categoria (nombre, descripcion, estado) VALUES (:nombre, :descripcion, :estado)");
-        $stmt->execute([
-            'nombre' => $nombre,
-            'descripcion' => $descripcion,
-            'estado' => $estado
-        ]);
-        $mensaje = '<div class="alert alert-success">Categoría registrada exitosamente.</div>';
+    if (!$esAdmin) {
+        $mensaje = '<div class="alert alert-danger">Acceso denegado. No tienes permisos para crear categorías.</div>';
     } else {
-        $mensaje = '<div class="alert alert-danger">El nombre de la categoría es obligatorio.</div>';
+        $nombre = trim($_POST['nombre']);
+        $descripcion = trim($_POST['descripcion']);
+        $estado = isset($_POST['estado']) ? 1 : 0;
+
+        if (!empty($nombre)) {
+            $stmt = $pdo->prepare("INSERT INTO categoria (nombre, descripcion, estado) VALUES (:nombre, :descripcion, :estado)");
+            $stmt->execute([
+                'nombre' => $nombre,
+                'descripcion' => $descripcion,
+                'estado' => $estado
+            ]);
+            $mensaje = '<div class="alert alert-success">Categoría registrada exitosamente.</div>';
+        } else {
+            $mensaje = '<div class="alert alert-danger">El nombre de la categoría es obligatorio.</div>';
+        }
     }
 }
 
@@ -29,9 +36,11 @@ $categorias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Gestión de Categorías</h2>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
-        <i class="bi bi-plus-lg"></i> Nueva Categoría
-    </button>
+    <?php if ($esAdmin): ?>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+            <i class="bi bi-plus-lg"></i> Nueva Categoría
+        </button>
+    <?php endif; ?>
 </div>
 
 <?= $mensaje ?>
@@ -68,9 +77,13 @@ $categorias = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php endif; ?>
                             </td>
                             <td class="text-end">
-                                <a href="categoria_eliminar.php?id=<?= $cat['id_categoria'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Deseas eliminar esta categoría?');">
-                                    <i class="bi bi-trash"></i>
-                                </a>
+                                <?php if ($esAdmin): ?>
+                                    <a href="categoria_eliminar.php?id=<?= $cat['id_categoria'] ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Deseas eliminar esta categoría?');">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                <?php else: ?>
+                                    <span class="badge bg-light text-muted">Solo lectura</span>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -80,7 +93,8 @@ $categorias = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 </div>
 
-<!-- Modal para Crear Categoría -->
+<!-- Modal para Crear Categoría (Solo renderizado para Admin) -->
+<?php if ($esAdmin): ?>
 <div class="modal fade" id="modalCrear" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -111,5 +125,6 @@ $categorias = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
   </div>
 </div>
+<?php endif; ?>
 
 <?php include_once 'includes/footer.php'; ?>
